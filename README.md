@@ -45,6 +45,7 @@ open index.html
 ```
 Js-cybercore/
 ├── index.html   # Application complète (HTML + CSS + JS en un seul fichier)
+├── calculette.png
 └── README.md
 ```
 
