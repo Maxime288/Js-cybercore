@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculette</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:        #1a1a1f;
+      --surface:   #22222a;
+      --card:      #2b2b36;
+      --border:    rgba(255,255,255,0.08);
+      --text:      #f0eff8;
+      --muted:     rgba(240,239,248,0.4);
+      --accent:    #7c6ff7;
+      --accent-bg: rgba(124,111,247,0.12);
+      --danger:    #e05a5a;
+      --danger-bg: rgba(224,90,90,0.12);
+      --success:   #5ac87a;
+      --success-bg:rgba(90,200,122,0.12);
+      --radius:    12px;
+      --radius-lg: 20px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Wrapper ── */
+    .calc {
+      width: 300px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    }
+
+    /* ── Écran ── */
+    .screen {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.1rem;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .screen__expr {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      min-height: 16px;
+      word-break: break-all;
+      text-align: right;
+    }
+
+    .screen__value {
+      font-family: 'DM Mono', monospace;
+      font-size: 32px;
+      font-weight: 400;
+      color: var(--text);
+      word-break: break-all;
+      text-align: right;
+      line-height: 1.1;
+      transition: transform 0.08s ease;
+    }
+
+    .screen__value.pop {
+      transform: scale(1.04);
+    }
+
+    /* ── Grille ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    /* ── Boutons ── */
+    button {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 15px 10px;
+      cursor: pointer;
+      transition: transform 0.07s ease, background 0.1s ease, box-shadow 0.1s ease;
+      outline: none;
+    }
+
+    button:active {
+      transform: scale(0.94);
+    }
+
+    /* Chiffres */
+    .btn-num {
+      background: var(--surface);
+      color: var(--text);
+    }
+    .btn-num:hover { background: #2e2e3c; }
+
+    /* Opérateurs */
+    .btn-op {
+      background: var(--accent-bg);
+      color: var(--accent);
+      border-color: rgba(124,111,247,0.2);
+      font-size: 17px;
+    }
+    .btn-op:hover { background: rgba(124,111,247,0.2); }
+    .btn-op.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* Utilitaires (AC, +/−, %) */
+    .btn-util {
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .btn-util:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+    /* AC */
+    .btn-ac {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: rgba(224,90,90,0.2);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+    .btn-ac:hover { background: rgba(224,90,90,0.22); }
+
+    /* Égal */
+    .btn-eq {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent;
+      font-size: 20px;
+      font-weight: 300;
+      box-shadow: 0 4px 20px rgba(124,111,247,0.35);
+    }
+    .btn-eq:hover { background: #8c80f8; box-shadow: 0 6px 24px rgba(124,111,247,0.45); }
+
+    /* Zéro large */
+    .span2 { grid-column: span 2; text-align: left; padding-left: 20px; }
+
+    /* Égal pleine largeur */
+    .span4 { grid-column: span 4; }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 1rem;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+
+<div class="calc">
+
+  <div class="screen">
+    <div class="screen__expr" id="expr"></div>
+    <div class="screen__value" id="screen">0</div>
+  </div>
+
+  <div class="grid">
+    <!-- Ligne 1 -->
+    <button class="btn-ac span2" onclick="clearAll()">AC</button>
+    <button class="btn-util" onclick="toggleSign()">+/−</button>
+    <button class="btn-util" onclick="percent()">%</button>
+
+    <!-- Ligne 2 -->
+    <button class="btn-num" onclick="inputNum('7')">7</button>
+    <button class="btn-num" onclick="inputNum('8')">8</button>
+    <button class="btn-num" onclick="inputNum('9')">9</button>
+    <button class="btn-op" id="op-÷" onclick="inputOp('÷')">÷</button>
+
+    <!-- Ligne 3 -->
+    <button class="btn-num" onclick="inputNum('4')">4</button>
+    <button class="btn-num" onclick="inputNum('5')">5</button>
+    <button class="btn-num" onclick="inputNum('6')">6</button>
+    <button class="btn-op" id="op-×" onclick="inputOp('×')">×</button>
+
+    <!-- Ligne 4 -->
+    <button class="btn-num" onclick="inputNum('1')">1</button>
+    <button class="btn-num" onclick="inputNum('2')">2</button>
+    <button class="btn-num" onclick="inputNum('3')">3</button>
+    <button class="btn-op" id="op-−" onclick="inputOp('−')">−</button>
+
+    <!-- Ligne 5 -->
+    <button class="btn-num span2" onclick="inputNum('0')">0</button>
+    <button class="btn-num" onclick="inputDot()">.</button>
+    <button class="btn-op" id="op-+" onclick="inputOp('+')">+</button>
+
+    <!-- Ligne 6 -->
+    <button class="btn-eq span4" onclick="calculate()">=</button>
+  </div>
+
+  <div class="footer">calculette · js</div>
+</div>
+
+<script>
+  let current   = '0';
+  let prev      = null;
+  let op        = null;
+  let justCalc  = false;
+
+  const screenEl = document.getElementById('screen');
+  const exprEl   = document.getElementById('expr');
+
+  function pop() {
+    screenEl.classList.remove('pop');
+    void screenEl.offsetWidth;
+    screenEl.classList.add('pop');
+    setTimeout(() => screenEl.classList.remove('pop'), 120);
+  }
+
+  function updateDisplay(val) {
+    let s = String(val);
+    if (s !== 'Erreur' && s.length > 12) {
+      let n = parseFloat(val);
+      s = n.toPrecision(8).replace(/\.?0+$/, '');
+      if (s.length > 12) s = n.toExponential(4);
+    }
+    screenEl.textContent = s;
+  }
+
+  function updateExpr() {
+    exprEl.textContent = (prev !== null && op) ? prev + ' ' + op : '';
+  }
+
+  function highlightOp(active) {
+    ['÷','×','−','+'].forEach(x => {
+      const b = document.getElementById('op-' + x);
+      if (b) b.classList.toggle('active', x === active);
+    });
+  }
+
+  function inputNum(n) {
+    if (justCalc) { current = n; justCalc = false; }
+    else if (current === '0') current = n;
+    else if (current.length < 12) current += n;
+    updateDisplay(current);
+    updateExpr();
+  }
+
+  function inputDot() {
+    if (justCalc) { current = '0.'; justCalc = false; }
+    else if (!current.includes('.')) current += '.';
+    updateDisplay(current);
+  }
+
+  function inputOp(o) {
+    if (prev !== null && op && !justCalc) {
+      const r = compute(parseFloat(prev), parseFloat(current), op);
+      current = String(r);
+      updateDisplay(current);
+    }
+    prev = current;
+    op = o;
+    justCalc = true;
+    highlightOp(o);
+    updateExpr();
+  }
+
+  function compute(a, b, o) {
+    if (o === '+') return parseFloat((a + b).toPrecision(12));
+    if (o === '−') return parseFloat((a - b).toPrecision(12));
+    if (o === '×') return parseFloat((a * b).toPrecision(12));
+    if (o === '÷') return b === 0 ? 'Erreur' : parseFloat((a / b).toPrecision(12));
+  }
+
+  function calculate() {
+    if (prev === null || op === null) return;
+    const a = parseFloat(prev), b = parseFloat(current);
+    const r = compute(a, b, op);
+    exprEl.textContent = prev + ' ' + op + ' ' + current + ' =';
+    current = String(r);
+    prev = null; op = null; justCalc = true;
+    updateDisplay(current);
+    highlightOp(null);
+    pop();
+  }
+
+  function clearAll() {
+    current = '0'; prev = null; op = null; justCalc = false;
+    updateDisplay('0');
+    exprEl.textContent = '';
+    highlightOp(null);
+  }
+
+  function toggleSign() {
+    if (current !== '0' && current !== 'Erreur') {
+      current = String(-parseFloat(current));
+      updateDisplay(current);
+    }
+  }
+
+  function percent() {
+    if (current !== 'Erreur') {
+      current = String(parseFloat(current) / 100);
+      updateDisplay(current);
+    }
+  }
+
+  /* Clavier */
+  document.addEventListener('keydown', e => {
+    if ('0123456789'.includes(e.key))          inputNum(e.key);
+    else if (e.key === '.')                     inputDot();
+    else if (e.key === '+')                     inputOp('+');
+    else if (e.key === '-')                     inputOp('−');
+    else if (e.key === '*')                     inputOp('×');
+    else if (e.key === '/') { e.preventDefault(); inputOp('÷'); }
+    else if (e.key === 'Enter' || e.key === '=') calculate();
+    else if (e.key === 'Escape')                clearAll();
+    else if (e.key === 'Backspace') {
+      if (current.length > 1) current = current.slice(0, -1);
+      else current = '0';
+      updateDisplay(current);
+    }
+  });
+</script>
+
+</body>
+</html>
