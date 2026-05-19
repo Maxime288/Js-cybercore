@@ -64,6 +64,8 @@ Js-cybercore/
 
 ## 🖥️ Aperçu
 
+![Capture d'écran de la calculette](calculette.png)
+
 Interface sombre avec palette violette (`#7c6ff7`), boutons différenciés par catégorie (chiffres, opérateurs, utilitaires), et écran à double ligne (expression + résultat).
 
 ---
